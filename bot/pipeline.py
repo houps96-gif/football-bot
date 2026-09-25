@@ -42,6 +42,7 @@ class Run:
             finished_day = self.st.roll_day()
             if finished_day and self.tg:
                 self.send_admin(daily_report(finished_day, finished_day.get("disabled_feeds", [])))
+            self.day_start = dict(self.st.daily)
 
             if self.tg:
                 self.commands = moderation.process_updates(self.tg, self.st)
@@ -80,8 +81,20 @@ class Run:
 
     def answer_commands(self) -> None:
         if "refresh" in self.commands:
-            moderation.send_menu(self.tg, f"Собрал свежее. Сегодня опубликовано {self.st.daily['published']} "
-                                          f"из {config.MAX_POSTS_PER_DAY}.")
+            start, day = getattr(self, "day_start", {}), self.st.daily
+            diff = {k: day.get(k, 0) - start.get(k, 0)
+                    for k in ("collected", "selected", "published", "results", "duplicates", "below_threshold")}
+            text = (f"Проверил все ленты. Новых записей: {diff['collected']}, отобрано: {diff['selected']}, "
+                    f"опубликовано сейчас: {diff['published']}"
+                    + (f", результатов матчей: {diff['results']}" if diff["results"] else "") + ".")
+            if not diff["published"] and not diff["results"]:
+                if not diff["collected"]:
+                    text += "\nС прошлой проверки в лентах ничего нового не появилось."
+                else:
+                    text += (f"\nНовое было, но не прошло отбор: ниже порога {diff['below_threshold']}, "
+                             f"дубли {diff['duplicates']}.")
+            text += f"\nСегодня всего опубликовано {day['published']} из {config.MAX_POSTS_PER_DAY}."
+            moderation.send_menu(self.tg, text)
         if "status" in self.commands:
             moderation.send_menu(self.tg, moderation.status_text(self.st))
         if "why" in self.commands:
