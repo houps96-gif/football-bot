@@ -11,6 +11,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write  # чтобы запуск мог сам запустить следующий
 
 jobs:
   run:
@@ -59,3 +60,9 @@ jobs:
           git -c user.name="news-bot" -c user.email="news-bot@users.noreply.github.com" \
             commit -qm "state $(date -u +%Y-%m-%dT%H:%MZ)"
           git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" bot-state
+
+      - name: Next run
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run bot.yml --repo "${{ github.repository }}" --ref main
