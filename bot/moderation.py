@@ -133,8 +133,9 @@ def why_text(st: Store) -> str:
     lines = []
     lines.append(f"Последняя новость в канале: {_local(published[-1])} ({_ago(published[-1])})."
                  if published else "Новостей в канале ещё не было.")
+    per_hour = f" из {config.MAX_POSTS_PER_HOUR}" if config.MAX_POSTS_PER_HOUR else ""
     lines.append(f"Сегодня опубликовано {day['published']} из {config.MAX_POSTS_PER_DAY}, "
-                 f"за последний час — {len(last_hour)} из {config.MAX_POSTS_PER_HOUR}.")
+                 f"за последний час — {len(last_hour)}{per_hour}.")
     lines.append(f"Отобрано и ждёт публикации: {waiting}. Ждёт сортировки: {len(d['inbox'])}.")
     lines.append(f"Сегодня отсеяно: не по теме {day['off_topic']}, ниже порога {config.IMPORTANCE_MIN} — "
                  f"{day['below_threshold']}, дубли {day['duplicates']}.")
@@ -152,7 +153,7 @@ def why_text(st: Store) -> str:
 
     if day["published"] >= config.MAX_POSTS_PER_DAY:
         reason = "исчерпан дневной лимит постов — новости снова пойдут после полуночи (или поднимите MAX_POSTS_PER_DAY)."
-    elif len(last_hour) >= config.MAX_POSTS_PER_HOUR and waiting:
+    elif config.MAX_POSTS_PER_HOUR and len(last_hour) >= config.MAX_POSTS_PER_HOUR and waiting:
         free_at = datetime.fromisoformat(last_hour[0]) + timedelta(hours=1)
         reason = f"лимит {config.MAX_POSTS_PER_HOUR} поста в час — следующая новость выйдет около {_local(free_at.isoformat())}."
     elif streak:

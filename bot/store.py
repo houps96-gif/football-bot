@@ -75,6 +75,8 @@ class Store:
             return None
         finished = self.daily
         self.data["daily"] = _empty_daily()
+        finished["disabled_feeds"] = list(self.data["disabled_feeds"])
+        self.data["disabled_feeds"], self.data["feed_failures"] = [], {}
         return finished
 
     def prune(self) -> None:

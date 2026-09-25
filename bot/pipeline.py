@@ -39,7 +39,7 @@ class Run:
         try:
             finished_day = self.st.roll_day()
             if finished_day and self.tg:
-                self.send_admin(daily_report(finished_day, self.st.data["disabled_feeds"]))
+                self.send_admin(daily_report(finished_day, finished_day.get("disabled_feeds", [])))
 
             if self.tg:
                 self.commands = moderation.process_updates(self.tg, self.st)
@@ -120,7 +120,7 @@ class Run:
                   f"⚠️ Дневной лимит постов ({config.MAX_POSTS_PER_DAY}) исчерпан. Отобранных новостей "
                   f"в очереди: {waiting}. До полуночи выходят только результаты матчей и «Матчи дня». "
                   "Поднять лимит — MAX_POSTS_PER_DAY в .env.")
-        if day["expired"] >= 5:
+        if config.MAX_POSTS_PER_HOUR and day["expired"] >= 5:
             alert("expired",
                   f"⚠️ Лимит {config.MAX_POSTS_PER_HOUR} поста в час не успевает: сегодня {day['expired']} "
                   "отобранных новостей устарели, так и не выйдя в канал. Поднять — MAX_POSTS_PER_HOUR в .env.")
@@ -309,7 +309,8 @@ class Run:
         budget = min(config.MAX_SUMMARIES_PER_RUN, config.MAX_CARDS_PER_DAY - self.st.daily["cards"])
         if config.auto_publish_now():
             budget = min(budget, config.MAX_POSTS_PER_DAY - self.st.daily["published"] - len(d["approved"]))
-            budget = min(budget, config.MAX_POSTS_PER_HOUR - published_last_hour(d) - len(d["approved"]))
+            if config.MAX_POSTS_PER_HOUR:
+                budget = min(budget, config.MAX_POSTS_PER_HOUR - published_last_hour(d) - len(d["approved"]))
         if self.dry_run:
             budget = min(budget, 5)
         ids = sorted(pending, key=lambda i: -pending[i]["item"]["importance"])[: max(budget, 0)]

@@ -28,7 +28,7 @@ def publish_approved(tg: Telegram, st: Store) -> None:
         if st.daily["published"] >= config.MAX_POSTS_PER_DAY:
             log.info("дневной лимит постов исчерпан, в очереди осталось %d", len(queue))
             return
-        if published_last_hour(st.data) >= config.MAX_POSTS_PER_HOUR:
+        if config.MAX_POSTS_PER_HOUR and published_last_hour(st.data) >= config.MAX_POSTS_PER_HOUR:
             log.info("лимит постов в час, в очереди осталось %d — выйдут позже", len(queue))
             return
         card = cards.get(item_id)

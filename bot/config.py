@@ -177,7 +177,7 @@ def is_night() -> bool:
     return hour >= NIGHT_FROM_HOUR or hour < NIGHT_TO_HOUR
 
 MAX_POSTS_PER_DAY = _int_env("MAX_POSTS_PER_DAY", 50)
-MAX_POSTS_PER_HOUR = _int_env("MAX_POSTS_PER_HOUR", 4)
+MAX_POSTS_PER_HOUR = _int_env("MAX_POSTS_PER_HOUR", 0)
 MAX_CARDS_PER_DAY = _int_env("MAX_CARDS_PER_DAY", 80)
 MAX_TRIAGE_PER_RUN = 120
 TRIAGE_BATCH_SIZE = 40
