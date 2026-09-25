@@ -55,7 +55,10 @@ def _published(entry) -> datetime | None:
 async def _fetch_one(client: httpx.AsyncClient, url: str):
     response = await client.get(url)
     response.raise_for_status()
-    return feedparser.parse(response.content)
+    feed = feedparser.parse(response.content)
+    feed["_debug"] = f"HTTP {response.status_code}, {response.url}, начало ответа: " \
+                     f"{response.text[:150]!r}"
+    return feed
 
 
 async def _fetch_all(feeds: list[tuple[str, str]]):
@@ -78,7 +81,7 @@ def fetch(feeds: list[tuple[str, str]]) -> tuple[list[NewsItem], dict[str, str]]
             errors[name] = f"{type(result).__name__}: {result}"[:200]
             continue
         if not result.entries:
-            errors[name] = "лента пустая или не разобралась"
+            errors[name] = f"лента пустая или не разобралась ({result.get('_debug', '')})"
             continue
         for entry in result.entries:
             link = entry.get("link")
