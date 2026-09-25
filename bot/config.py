@@ -16,6 +16,7 @@ def _int_env(name: str, default: int) -> int:
     return int(value) if value else default
 
 
+
 LLM_PROVIDER = _env("LLM_PROVIDER", "gemini").lower()
 GEMINI_API_KEY = _env("GEMINI_API_KEY")
 ANTHROPIC_API_KEY = _env("ANTHROPIC_API_KEY")
@@ -36,61 +37,26 @@ LLM_MIN_INTERVAL_SECONDS = _int_env("LLM_MIN_INTERVAL_SECONDS", 6)
 LLM_MAX_CALLS_PER_DAY = _int_env("LLM_MAX_CALLS_PER_DAY", 800)
 
 
-FEEDS = [
-    ("BBC", "https://feeds.bbci.co.uk/sport/football/rss.xml"),
-    ("Guardian", "https://www.theguardian.com/football/rss"),
-    ("Sky Sports", "https://www.skysports.com/rss/11095"),
-    ("Telegraph", "https://www.telegraph.co.uk/football/rss.xml"),
-    ("Evening Standard", "https://www.standard.co.uk/sport/football/rss"),
-    ("Independent", "https://www.independent.co.uk/sport/football/rss"),
-    ("football.london", "https://www.football.london/?service=rss"),
-    ("Sports.ru", "https://www.sports.ru/rss/topnews/football.xml"),
-    ("BBC Chelsea", "https://feeds.bbci.co.uk/sport/football/teams/chelsea/rss.xml"),
-    ("Sky Sports Chelsea", "https://www.skysports.com/rss/11668"),
-    ("Guardian Chelsea", "https://www.theguardian.com/football/chelsea/rss"),
-    ("Olé", "https://www.ole.com.ar/rss/ultimas-noticias/"),
-    ("ge Globo", "https://ge.globo.com/rss/ge/futebol/"),
-    ("Marca", "https://e00-marca.uecdn.es/rss/futbol/primera-division.xml"),
-    ("AS", "https://feeds.as.com/mrss-s/pages/as/site/as.com/section/futbol/portada/"),
-    ("Mundo Deportivo", "https://www.mundodeportivo.com/rss/futbol"),
-    ("Gazzetta", "https://www.gazzetta.it/rss/calcio.xml"),
-    ("Football Italia", "https://football-italia.net/feed/"),
-    ("Kicker", "https://newsfeed.kicker.de/news/aktuell"),
-    ("L'Équipe", "https://dwh.lequipe.fr/api/edito/rss?path=/Football/"),
-    ("RMC Sport", "https://rmcsport.bfmtv.com/rss/football/"),
-]
+from bot import profiles
 
-SKIP_URL_PATTERNS = [
-    r"/jogo/", r"/ao-vivo", r"/partido/", r"/en-vivo", r"/en-directo", r"/directo", r"/direct-", r"/diretta",
-    r"/live-ticker", r"/live/", r"kicker\.de/live-", r"_LS-\d+", r"live-blog", r"liveblog", r"-live-updates?",
-    r"/match/", r"minute-by-minute",
-    r"-xi-vs-", r"predicted-line", r"team-news", r"-preview-", r"/preview",
-    r"/videos?/", r"/watch/", r"/podcasts?/", r"/gallery/", r"/galerias?/", r"/fotos?/", r"/quiz",
-    r"/femenino/", r"/feminin", r"/frauen",
-]
-SKIP_TITLE_PATTERNS = [
-    r"^\s*(live!?|direct\.?|directo|en vivo|ao vivo|diretta)\b", r"\blive\s*:", r"[–-]\s*live\b", r"\blive stream",
-    r"how to watch", r"where to watch", r"on tv\b", r"\bprediction\b", r"\bodds\b", r"betting tips",
-    r"\b(predicted|confirmed|probable) (line-?ups?|xi)\b", r"^\s*explained:",
-    r"\bsub-?20\b", r"\bu-?2[01]\b",
-    r"onde assistir", r"dónde ver", r"horário e escalaç", r"pronóstico",
-    r"онлайн-трансляц", r"прямая трансляц", r"где смотреть", r"прогноз на матч",
-]
+PROFILE = _env("PROFILE", "football")
+_P = profiles.load(PROFILE)
 
-
-LEAGUES = ["АПЛ", "ЛаЛига", "СерияА", "Бундеслига", "Лига1", "ЛЧ", "ЛЕ", "ЛК", "Сборные",
-           "Аргентина", "Бразилия", "Другое"]
-MAIN_LEAGUES = set(LEAGUES) - {"Другое", "Аргентина", "Бразилия"}
-LEAGUE_TITLES = {
-    "АПЛ": "АПЛ", "ЛаЛига": "Ла Лига", "СерияА": "Серия А", "Бундеслига": "Бундеслига",
-    "Лига1": "Лига 1", "ЛЧ": "Лига чемпионов", "ЛЕ": "Лига Европы", "ЛК": "Лига конференций",
-    "Сборные": "Сборные", "Аргентина": "Аргентина", "Бразилия": "Бразилия", "Другое": "Футбол",
-}
-
-FAVORITE_CLUB = _env("FAVORITE_CLUB", "Челси")
-FAVORITE_BOOST = _int_env("FAVORITE_BOOST", 2)
-
-CATEGORIES = ["матч", "трансфер", "травма", "тренер", "дисциплина", "слух", "клуб"]
+FEEDS = _P.FEEDS
+SKIP_URL_PATTERNS = _P.SKIP_URL_PATTERNS
+SKIP_TITLE_PATTERNS = _P.SKIP_TITLE_PATTERNS
+LEAGUES = _P.LEAGUES
+MAIN_LEAGUES = _P.MAIN_LEAGUES
+LEAGUE_TITLES = _P.LEAGUE_TITLES
+CATEGORIES = _P.CATEGORIES
+TRIAGE_SYSTEM = _P.TRIAGE_SYSTEM
+SUMMARY_SYSTEM = _P.SUMMARY_SYSTEM
+WIKI_HINT = getattr(_P, "WIKI_HINT", "")
+FEATURE_RESULTS = getattr(_P, "FEATURE_RESULTS", False)
+FEATURE_LIVE = getattr(_P, "FEATURE_LIVE", False)
+FEATURE_MATCHDAY = getattr(_P, "FEATURE_MATCHDAY", False)
+FAVORITE_CLUB = _env("FAVORITE_CLUB", getattr(_P, "FAVORITE_CLUB", ""))
+FAVORITE_BOOST = _int_env("FAVORITE_BOOST", getattr(_P, "FAVORITE_BOOST", 0))
 
 
 TOP_TEAMS = {
@@ -228,12 +194,12 @@ HTTP_TIMEOUT = 10
 USER_AGENT = _env("USER_AGENT", "Mozilla/5.0 (compatible; football-news-bot/1.0)")
 
 
-STATE_PATH = ROOT / "data" / "state.json"
-GLOSSARY_PATH = ROOT / "data" / "glossary.json"
+STATE_PATH = ROOT / "data" / ("state.json" if PROFILE == "football" else f"state_{PROFILE}.json")
+GLOSSARY_PATH = ROOT / "data" / getattr(_P, "GLOSSARY_FILE", f"glossary_{PROFILE}.json")
 NAMES_PATH = ROOT / "data" / "names_ru.json"
 FONTS_DIR = ROOT / "assets" / "fonts"
 PREVIEW_DIR = ROOT / "preview"
-CHANNEL_TITLE = _env("CHANNEL_TITLE", "Футбол Европы")
+CHANNEL_TITLE = _env("CHANNEL_TITLE", _P.CHANNEL_TITLE)
 
 
 def require_telegram() -> None:

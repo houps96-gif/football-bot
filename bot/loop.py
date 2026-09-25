@@ -94,9 +94,9 @@ def run_forever() -> None:
     next_live = next_matchday = 0.0
 
     while True:
-        if time.monotonic() >= next_live:
+        if config.FEATURE_LIVE and time.monotonic() >= next_live:
             next_live = time.monotonic() + _live_step(live)
-        if time.monotonic() >= next_matchday:
+        if config.FEATURE_MATCHDAY and time.monotonic() >= next_matchday:
             _matchday_step(matchday)
             next_matchday = time.monotonic() + MATCHDAY_SECONDS
         try:

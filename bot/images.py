@@ -36,7 +36,7 @@ def wiki_photo(event: str) -> str:
             try:
                 data = client.get(API, params={
                     "action": "query", "format": "json", "redirects": 1,
-                    "generator": "search", "gsrsearch": f"{name} football", "gsrlimit": 1,
+                    "generator": "search", "gsrsearch": f"{name} {config.WIKI_HINT}".strip(), "gsrlimit": 1,
                     "prop": "pageimages", "piprop": "thumbnail", "pithumbsize": 1200,
                 }).json()
             except (httpx.HTTPError, ValueError) as e:

@@ -52,9 +52,10 @@ class Run:
 
             self.collect()
             llm = get_llm()
-            if self.extras and self.tg:
+            if self.extras and self.tg and config.FEATURE_LIVE:
                 Live(self.tg).check(self.st)
-            self.post_results(llm)
+            if config.FEATURE_RESULTS:
+                self.post_results(llm)
             self.triage_inbox(llm)
             self.summarize_pending(llm)
 
@@ -62,7 +63,8 @@ class Run:
                 publish.publish_approved(self.tg, self.st)
                 self.check_alerts()
             if self.extras and self.tg:
-                Matchday(self.tg).step(self.st)
+                if config.FEATURE_MATCHDAY:
+                    Matchday(self.tg).step(self.st)
                 self.answer_commands()
             self.st.prune()
         except Exception as e:
