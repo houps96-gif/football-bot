@@ -1,7 +1,7 @@
 import logging
 import time
 
-from bot import config, extract, moderation, publish, results
+from bot import config, extract, images, moderation, publish, results
 from bot.dedup import is_duplicate
 from bot.live import Live, result_competitions
 from bot.llm import LLM, LLMError, get_llm
@@ -14,6 +14,8 @@ from bot.telegram import Telegram, TelegramError
 from bot.triage import triage
 
 log = logging.getLogger(__name__)
+
+THIN_SUMMARY_CHARS = 60
 
 
 class Run:
@@ -254,7 +256,7 @@ class Run:
 
         ids = sorted(inbox, key=lambda i: inbox[i]["item"]["published"] or inbox[i]["added"], reverse=True)
         ids = ids[: self.limit or config.MAX_TRIAGE_PER_RUN]
-        recent = [e["event"] for e in d["events"]]
+        recent = [{"event": e["event"], "topic": e.get("topic", "")} for e in d["events"]]
 
         for start in range(0, len(ids), config.TRIAGE_BATCH_SIZE):
             if not self.llm_allowed():
@@ -282,9 +284,9 @@ class Run:
                 self.st.bump("triaged")
                 item.importance, item.league, item.event = result["importance"], result["league"], result["event"]
                 verdict = self._select(item, result, recent)
-                self.triage_log.append((item, result["relevant"], verdict))
+                self.triage_log.append((item, result["relevant"], verdict, result.get("topic", "")))
 
-    def _select(self, item: NewsItem, result: dict, recent: list[str]) -> str:
+    def _select(self, item: NewsItem, result: dict, recent: list[dict]) -> str:
         if not result["relevant"]:
             self.st.bump("off_topic")
             return "не по теме"
@@ -292,11 +294,13 @@ class Run:
         if item.importance < threshold:
             self.st.bump("below_threshold")
             return f"ниже порога {threshold}"
-        if result["duplicate"] or is_duplicate(item.event, recent):
+        topic = result.get("topic", "")
+        same_topic = bool(topic) and any(r.get("topic") == topic for r in recent)
+        if same_topic or result["duplicate"] or is_duplicate(item.event, [r["event"] for r in recent]):
             self.st.bump("duplicates")
             return "дубль"
-        recent.append(item.event)
-        self.st.data["events"].append({"event": item.event, "id": item.id, "ts": ts()})
+        recent.append({"event": item.event, "topic": topic})
+        self.st.data["events"].append({"event": item.event, "topic": topic, "id": item.id, "ts": ts()})
         self.st.data["pending"][item.id] = {"item": item.to_dict(), "added": ts(), "tries": 0}
         self.st.bump("selected")
         return "ОТОБРАНО"
@@ -321,7 +325,16 @@ class Run:
             item = NewsItem.from_dict(pending[item_id]["item"])
             article = extract.fetch_article(item.url)
             text = article.text
+            if not text and len((item.summary or "").strip()) < THIN_SUMMARY_CHARS:
+                del pending[item_id]
+                self.st.daily["thin"] = self.st.daily.get("thin", 0) + 1
+                log.info("пропущено без текста: статья не скачалась, анонс короче %d символов: %s | %s",
+                         THIN_SUMMARY_CHARS, item.source, item.title[:100])
+                continue
             item.image_url = article.image_url or item.image_url
+            if not item.image_url:
+                item.image_url = images.wiki_photo(item.event)
+                item.image_credit = images.CREDIT if item.image_url else ""
             try:
                 result = summarize(llm, item, text)
                 self.st.bump("llm_calls")
@@ -360,10 +373,10 @@ class Run:
         print("\n" + "═" * 70)
         print(f"Сортировка: {len(self.triage_log)} новостей")
         print("═" * 70)
-        for item, relevant, verdict in sorted(self.triage_log, key=lambda r: -r[0].importance):
+        for item, relevant, verdict, topic in sorted(self.triage_log, key=lambda r: -r[0].importance):
             mark = "►" if verdict == "ОТОБРАНО" else " "
             print(f"{mark} {item.importance:>2} {item.league:<10} {verdict:<16} {item.source:<14} {item.title[:70]}")
-            print(f"{'':32}event: {item.event}")
+            print(f"{'':32}topic: {topic or '—'} · event: {item.event}")
 
 
 def _drop_stale(queue: dict, ttl_hours: int) -> int:
@@ -384,7 +397,7 @@ def daily_report(day: dict, disabled_feeds: list[str]) -> str:
         f"Отсортировано: {day['triaged']} · отобрано: {day['selected']}",
         f"Отсеяно: не по теме {day.get('off_topic', 0)} · ниже порога {day.get('below_threshold', 0)}"
         f" · дубли {day.get('duplicates', 0)}",
-        f"Пересказано: {day['summarized']} · карточек: {day['cards']}",
+        f"Пересказано: {day['summarized']} · карточек: {day['cards']} · без текста: {day.get('thin', 0)}",
         f"Опубликовано новостей: {day['published']} · отклонено: {day['rejected']}",
         f"Результатов матчей: {day['results']}",
         f"Запросов к LLM: {day['llm_calls']} · ошибок: {day['llm_errors']}",

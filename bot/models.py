@@ -18,6 +18,7 @@ class NewsItem:
     summary_ru: str = ""
     category: str = ""
     image_url: str = ""
+    image_credit: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)

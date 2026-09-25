@@ -61,13 +61,18 @@ FEEDS = [
 ]
 
 SKIP_URL_PATTERNS = [
-    r"/jogo/", r"/ao-vivo", r"/partido/", r"/en-vivo", r"/directo", r"/diretta", r"/live-ticker",
-    r"/live/", r"live-blog", r"liveblog", r"/match/", r"minute-by-minute",
-    r"/videos?/", r"/podcasts?/", r"/gallery/", r"/galerias?/", r"/fotos?/", r"/quiz",
+    r"/jogo/", r"/ao-vivo", r"/partido/", r"/en-vivo", r"/en-directo", r"/directo", r"/direct-", r"/diretta",
+    r"/live-ticker", r"/live/", r"kicker\.de/live-", r"_LS-\d+", r"live-blog", r"liveblog", r"-live-updates?",
+    r"/match/", r"minute-by-minute",
+    r"-xi-vs-", r"predicted-line", r"team-news", r"-preview-", r"/preview",
+    r"/videos?/", r"/watch/", r"/podcasts?/", r"/gallery/", r"/galerias?/", r"/fotos?/", r"/quiz",
+    r"/femenino/", r"/feminin", r"/frauen",
 ]
 SKIP_TITLE_PATTERNS = [
-    r"^\s*(live|direct|directo|en vivo|ao vivo|diretta)\b", r"\blive\s*:", r"\blive stream",
+    r"^\s*(live!?|direct\.?|directo|en vivo|ao vivo|diretta)\b", r"\blive\s*:", r"[–-]\s*live\b", r"\blive stream",
     r"how to watch", r"where to watch", r"on tv\b", r"\bprediction\b", r"\bodds\b", r"betting tips",
+    r"\b(predicted|confirmed|probable) (line-?ups?|xi)\b", r"^\s*explained:",
+    r"\bsub-?20\b", r"\bu-?2[01]\b",
     r"onde assistir", r"dónde ver", r"horário e escalaç", r"pronóstico",
     r"онлайн-трансляц", r"прямая трансляц", r"где смотреть", r"прогноз на матч",
 ]

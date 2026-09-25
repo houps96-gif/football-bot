@@ -17,6 +17,8 @@ def post_text(item: NewsItem) -> str:
     footer = f'<a href="{html.escape(item.url, quote=True)}">{esc(item.source)}</a>'
     if item.league and item.league != "Другое":
         footer += f" · #{item.league}"
+    if item.image_credit:
+        footer += f" · {esc(item.image_credit)}"
     return f"<b>{esc(item.title_ru)}</b>\n\n{esc(item.summary_ru)}\n\n{footer}"
 
 

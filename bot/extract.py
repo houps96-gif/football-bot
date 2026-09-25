@@ -6,6 +6,7 @@ import httpx2 as httpx
 import trafilatura
 
 from bot import config
+from bot.sources import espn
 
 log = logging.getLogger(__name__)
 
@@ -17,6 +18,8 @@ class Article:
 
 
 def fetch_article(url: str) -> Article:
+    if espn.STORY_ID.search(url):
+        return Article(text=espn.story_text(url))
     try:
         response = httpx.get(
             url,
