@@ -17,6 +17,12 @@ TRACKING_PREFIXES = ("utm_", "at_", "ns_")
 TAG_RE = re.compile(r"<[^>]+>")
 SPACE_RE = re.compile(r"\s+")
 GOOGLE_SOURCE_SUFFIX = re.compile(r"\s+-\s+[^-]{2,40}$")
+SKIP_URL = re.compile("|".join(config.SKIP_URL_PATTERNS), re.I)
+SKIP_TITLE = re.compile("|".join(config.SKIP_TITLE_PATTERNS), re.I)
+
+
+def is_not_news(url: str, title: str) -> bool:
+    return bool(SKIP_URL.search(url) or SKIP_TITLE.search(title))
 
 
 def canonical_url(url: str) -> str:
@@ -91,7 +97,7 @@ def fetch(feeds: list[tuple[str, str]]) -> tuple[list[NewsItem], dict[str, str]]
             if via_google:
                 title = GOOGLE_SOURCE_SUFFIX.sub("", title)
                 entry["summary"] = ""
-            if not link or not title:
+            if not link or not title or is_not_news(link, title):
                 continue
             published = _published(entry)
             if published and published < cutoff:

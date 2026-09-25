@@ -61,6 +61,18 @@ FEEDS = [
     ("RMC Sport", "https://rmcsport.bfmtv.com/rss/football/"),
 ]
 
+SKIP_URL_PATTERNS = [
+    r"/jogo/", r"/ao-vivo", r"/partido/", r"/en-vivo", r"/directo", r"/diretta", r"/live-ticker",
+    r"/live/", r"live-blog", r"liveblog", r"/match/", r"minute-by-minute",
+    r"/videos?/", r"/podcasts?/", r"/gallery/", r"/galerias?/", r"/fotos?/", r"/quiz",
+]
+SKIP_TITLE_PATTERNS = [
+    r"^\s*(live|direct|directo|en vivo|ao vivo|diretta)\b", r"\blive\s*:", r"\blive stream",
+    r"how to watch", r"where to watch", r"on tv\b", r"\bprediction\b", r"\bodds\b", r"betting tips",
+    r"onde assistir", r"dónde ver", r"horário e escalaç", r"pronóstico",
+    r"онлайн-трансляц", r"прямая трансляц", r"где смотреть", r"прогноз на матч",
+]
+
 
 LEAGUES = ["АПЛ", "ЛаЛига", "СерияА", "Бундеслига", "Лига1", "ЛЧ", "ЛЕ", "ЛК", "Сборные",
            "Аргентина", "Бразилия", "Другое"]
