@@ -45,6 +45,12 @@ FEEDS = [
     ("Independent", "https://www.independent.co.uk/sport/football/rss"),
     ("football.london", "https://www.football.london/?service=rss"),
     ("Sports.ru", "https://www.sports.ru/rss/topnews/football.xml"),
+    ("BBC Chelsea", "https://feeds.bbci.co.uk/sport/football/teams/chelsea/rss.xml"),
+    ("Sky Sports Chelsea", "https://www.skysports.com/rss/11668"),
+    ("Guardian Chelsea", "https://www.theguardian.com/football/chelsea/rss"),
+    ("ESPN UK", "https://www.espn.co.uk/espn/rss/football/news"),
+    ("Olé", "https://www.ole.com.ar/rss/ultimas-noticias/"),
+    ("ge Globo", "https://ge.globo.com/rss/ge/futebol/"),
     ("Marca", "https://e00-marca.uecdn.es/rss/futbol/primera-division.xml"),
     ("AS", "https://feeds.as.com/mrss-s/pages/as/site/as.com/section/futbol/portada/"),
     ("Mundo Deportivo", "https://www.mundodeportivo.com/rss/futbol"),
@@ -56,13 +62,17 @@ FEEDS = [
 ]
 
 
-LEAGUES = ["АПЛ", "ЛаЛига", "СерияА", "Бундеслига", "Лига1", "ЛЧ", "ЛЕ", "ЛК", "Сборные", "Другое"]
-MAIN_LEAGUES = set(LEAGUES) - {"Другое"}
+LEAGUES = ["АПЛ", "ЛаЛига", "СерияА", "Бундеслига", "Лига1", "ЛЧ", "ЛЕ", "ЛК", "Сборные",
+           "Аргентина", "Бразилия", "Другое"]
+MAIN_LEAGUES = set(LEAGUES) - {"Другое", "Аргентина", "Бразилия"}
 LEAGUE_TITLES = {
     "АПЛ": "АПЛ", "ЛаЛига": "Ла Лига", "СерияА": "Серия А", "Бундеслига": "Бундеслига",
     "Лига1": "Лига 1", "ЛЧ": "Лига чемпионов", "ЛЕ": "Лига Европы", "ЛК": "Лига конференций",
-    "Сборные": "Сборные", "Другое": "Футбол",
+    "Сборные": "Сборные", "Аргентина": "Аргентина", "Бразилия": "Бразилия", "Другое": "Футбол",
 }
+
+FAVORITE_CLUB = _env("FAVORITE_CLUB", "Челси")
+FAVORITE_BOOST = _int_env("FAVORITE_BOOST", 2)
 
 CATEGORIES = ["матч", "трансфер", "травма", "тренер", "дисциплина", "слух", "клуб"]
 
