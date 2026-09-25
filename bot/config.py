@@ -48,7 +48,7 @@ FEEDS = [
     ("BBC Chelsea", "https://feeds.bbci.co.uk/sport/football/teams/chelsea/rss.xml"),
     ("Sky Sports Chelsea", "https://www.skysports.com/rss/11668"),
     ("Guardian Chelsea", "https://www.theguardian.com/football/chelsea/rss"),
-    ("ESPN UK", "https://www.espn.co.uk/espn/rss/football/news"),
+    ("ESPN", "https://news.google.com/rss/search?q=site:espn.com+soccer+when:1d&hl=en-US&gl=US&ceid=US:en"),
     ("Olé", "https://www.ole.com.ar/rss/ultimas-noticias/"),
     ("ge Globo", "https://ge.globo.com/rss/ge/futebol/"),
     ("Marca", "https://e00-marca.uecdn.es/rss/futbol/primera-division.xml"),

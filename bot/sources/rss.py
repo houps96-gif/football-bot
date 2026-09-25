@@ -16,6 +16,7 @@ TRACKING_PARAMS = {"cmp", "ito", "ref", "xtor", "src", "ocid"}
 TRACKING_PREFIXES = ("utm_", "at_", "ns_")
 TAG_RE = re.compile(r"<[^>]+>")
 SPACE_RE = re.compile(r"\s+")
+GOOGLE_SOURCE_SUFFIX = re.compile(r"\s+-\s+[^-]{2,40}$")
 
 
 def canonical_url(url: str) -> str:
@@ -76,7 +77,8 @@ def fetch(feeds: list[tuple[str, str]]) -> tuple[list[NewsItem], dict[str, str]]
     items: list[NewsItem] = []
     errors: dict[str, str] = {}
 
-    for (name, _), result in zip(feeds, results):
+    for (name, url), result in zip(feeds, results):
+        via_google = "news.google.com" in url
         if isinstance(result, BaseException):
             errors[name] = f"{type(result).__name__}: {result}"[:200]
             continue
@@ -86,6 +88,9 @@ def fetch(feeds: list[tuple[str, str]]) -> tuple[list[NewsItem], dict[str, str]]
         for entry in result.entries:
             link = entry.get("link")
             title = clean_text(entry.get("title", ""))
+            if via_google:
+                title = GOOGLE_SOURCE_SUFFIX.sub("", title)
+                entry["summary"] = ""
             if not link or not title:
                 continue
             published = _published(entry)
