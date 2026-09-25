@@ -1,0 +1,14 @@
+[Unit]
+Description=Football news bot (Telegram-канал «Футбол Европы»)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=bot
+WorkingDirectory=/home/bot/football-bot
+ExecStart=/home/bot/football-bot/.venv/bin/python run.py --loop
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

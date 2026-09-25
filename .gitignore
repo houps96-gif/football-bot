@@ -1,0 +1,14 @@
+.env
+.claude/settings.local.json
+data/state.json
+data/state.tmp
+preview/
+logs/
+*.md
+BRIEF.md
+local/
+assets/_preview*.png
+assets/avatar_*.png
+__pycache__/
+*.pyc
+.venv/

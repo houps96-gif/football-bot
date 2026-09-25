@@ -1,0 +1,8 @@
+anthropic>=1.0
+httpx2
+feedparser
+trafilatura
+rapidfuzz
+python-dotenv
+pillow
+tzdata
