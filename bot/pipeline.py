@@ -1,5 +1,6 @@
 import logging
 import time
+from datetime import timedelta
 
 from bot import config, extract, images, moderation, publish, results
 from bot.dedup import is_duplicate
@@ -8,7 +9,7 @@ from bot.llm import LLM, LLMError, get_llm
 from bot.matchday import Matchday
 from bot.models import NewsItem
 from bot.sources import matches, registry
-from bot.store import Store, age_hours, published_last_hour, ts
+from bot.store import Store, age_hours, now, published_last_hour, ts
 from bot.summarize import summarize
 from bot.telegram import Telegram, TelegramError
 from bot.triage import triage
@@ -111,6 +112,10 @@ class Run:
             self.st.save()
 
     def llm_allowed(self) -> bool:
+        pause = self.st.data.get("llm_pause_until")
+        if pause and age_hours(pause) < 0:
+            log.info("LLM на паузе до %s: кончилась квота", pause)
+            return False
         used = self.st.daily["llm_calls"] + self.st.daily["llm_errors"]
         if used < config.LLM_MAX_CALLS_PER_DAY:
             return True
@@ -147,6 +152,9 @@ class Run:
             d["llm_last_ok"] = ts()
         if self.llm_error:
             d["llm_last_error"] = {"text": self.llm_error[:300], "ts": ts()}
+            if "429" in self.llm_error and "503" not in self.llm_error:
+                d["llm_pause_until"] = ts(now() + timedelta(minutes=config.LLM_QUOTA_PAUSE_MINUTES))
+                log.warning("квота Gemini кончилась — пауза %d мин", config.LLM_QUOTA_PAUSE_MINUTES)
 
         if self.llm_ok:
             if d.get("llm_down_alerted"):
@@ -268,6 +276,12 @@ class Run:
         d = self.st.data
         inbox = d["inbox"]
         _drop_stale(inbox, config.MAX_ITEM_AGE_HOURS)
+
+        if inbox and not self.limit and not self.dry_run:
+            oldest = max(age_hours(e["added"]) for e in inbox.values()) * 60
+            if len(inbox) < config.TRIAGE_MIN_BATCH and oldest < config.TRIAGE_MAX_WAIT_MINUTES:
+                log.info("сортировка подождёт: в очереди %d, самая старая ждёт %d мин", len(inbox), oldest)
+                return
 
         ids = sorted(inbox, key=lambda i: inbox[i]["item"]["published"] or inbox[i]["added"], reverse=True)
         ids = ids[: self.limit or config.MAX_TRIAGE_PER_RUN]
