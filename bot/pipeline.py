@@ -202,17 +202,26 @@ class Run:
     def collect(self) -> None:
         d = self.st.data
         disabled = set(d["disabled_feeds"])
-        items, errors = registry.collect(disabled)
+        fetched, backoff = d.setdefault("feed_fetched", {}), d.setdefault("feed_backoff", {})
+        resting = {name for name, stamp in fetched.items() if age_hours(stamp) * 60 < config.FEED_MIN_INTERVAL_MINUTES}
+        resting |= {name for name, until in backoff.items() if age_hours(until) < 0}
+        skip = disabled | resting
+        items, errors = registry.collect(skip)
 
-        for name, _ in config.FEEDS:
-            if name in disabled:
+        for name in [n for n, _ in config.FEEDS] + [registry.ESPN_API]:
+            if name in skip:
                 continue
+            fetched[name] = ts()
             if name not in errors:
                 d["feed_failures"].pop(name, None)
                 continue
+            if "429" in errors[name]:
+                backoff[name] = ts(now() + timedelta(minutes=config.FEED_BACKOFF_MINUTES))
+                log.warning("лента %s просит реже (429) — пауза %d мин", name, config.FEED_BACKOFF_MINUTES)
+                continue
             fails = d["feed_failures"][name] = d["feed_failures"].get(name, 0) + 1
             log.warning("лента %s: %s (ошибок подряд: %d)", name, errors[name], fails)
-            if fails >= config.FEED_MAX_FAILURES:
+            if fails >= config.FEED_MAX_FAILURES and name != registry.ESPN_API:
                 d["disabled_feeds"].append(name)
                 self.notes.append(f"⚠️ Лента {name} отключена после {fails} ошибок подряд: {errors[name]}")
 
@@ -224,8 +233,8 @@ class Run:
             d["inbox"][item.id] = {"item": item.to_dict(), "added": ts(), "tries": 0}
             new += 1
         self.st.bump("collected", new)
-        log.info("лент: %d, записей: %d, новых: %d, ждут сортировки: %d",
-                 len(config.FEEDS) - len(disabled), len(items), new, len(d["inbox"]))
+        log.info("лент опрошено: %d (отдыхают %d, отключены %d), записей: %d, новых: %d, ждут сортировки: %d",
+                 len(config.FEEDS) + 1 - len(skip), len(resting), len(disabled), len(items), new, len(d["inbox"]))
 
     def post_results(self, llm: LLM) -> None:
         d = self.st.data
