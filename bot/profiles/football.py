@@ -1,4 +1,3 @@
-
 NAME = "football"
 CHANNEL_TITLE = "Футбол Европы"
 GLOSSARY_FILE = "glossary.json"
@@ -37,7 +36,7 @@ FEEDS = [
 ]
 
 SKIP_URL_PATTERNS = [
-    r"/jogo/", r"/ao-vivo", r"/partido/", r"/en-vivo", r"/en-directo", r"/directo", r"/direct-", r"/diretta",
+    r"/jogo/", r"/ao-vivo", r"/partido/", r"en-vivo", r"en-directo", r"/directo", r"/direct-", r"/diretta",
     r"/live-ticker", r"/live/", r"kicker\.de/live-", r"_LS-\d+", r"live-blog", r"liveblog", r"-live-updates?",
     r"/match/", r"minute-by-minute",
     r"-xi-vs-", r"predicted-line", r"team-news", r"-preview-", r"/preview",

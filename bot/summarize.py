@@ -3,7 +3,7 @@ import re
 
 from bot import config, glossary
 from bot.llm import LLM
-from bot.llm.base import SUMMARY_SCHEMA
+from bot.llm.base import SUMMARY_BATCH_SCHEMA, SUMMARY_SCHEMA
 from bot.models import NewsItem
 
 log = logging.getLogger(__name__)
@@ -72,6 +72,10 @@ def summarize(llm: LLM, item: NewsItem, text: str | None) -> dict:
                 result = retry
             log.info("пересказ: после повтора латиницы %d (было %d)", len(left), len(found))
 
+    return _normalize(result)
+
+
+def _normalize(result: dict) -> dict:
     category = result.get("category")
     return {
         "title_ru": clean_ru(result.get("title_ru")),
@@ -79,3 +83,46 @@ def summarize(llm: LLM, item: NewsItem, text: str | None) -> dict:
         "category": category if category in config.CATEGORIES else config.CATEGORIES[-1],
         "newsworthy": result.get("newsworthy", True) is not False,
     }
+
+
+
+BATCH_TEXT_CHARS = 3500
+
+BATCH_NOTE = """
+
+В запросе несколько статей, каждая начинается строкой «=== СТАТЬЯ <id> ===». Для КАЖДОЙ верни отдельный пост с тем же id — строго по тексту именно этой статьи, не смешивая факты из разных статей."""
+
+
+def _batch_prompt(articles: list[tuple[NewsItem, str | None]]) -> str:
+    blocks = []
+    for item, text in articles:
+        blocks.append(f"=== СТАТЬЯ {item.id} ===\n" + build_prompt(item, (text or "")[:BATCH_TEXT_CHARS] or None))
+    return "\n\n".join(blocks)
+
+
+def summarize_batch(llm: LLM, articles: list[tuple[NewsItem, str | None]]) -> dict[str, dict]:
+    global latin_retries
+    system = SYSTEM + BATCH_NOTE
+    result = llm.generate_json(system, _batch_prompt(articles), SUMMARY_BATCH_SCHEMA, max_tokens=8192)
+    known = {item.id for item, _ in articles}
+    posts = {p["id"]: p for p in result.get("posts", []) if p.get("id") in known and p.get("title_ru")}
+
+    dirty = {pid: latin_words(p) for pid, p in posts.items() if latin_words(p)}
+    if dirty:
+        latin_retries += 1
+        log.info("пересказ: латиница в %d постах, переспрашиваю модель", len(dirty))
+        again = [(item, text) for item, text in articles if item.id in dirty]
+        note = "\n\nВ прошлой версии остались слова латиницей: " + "; ".join(
+            f"{pid}: {', '.join(words)}" for pid, words in dirty.items()) + \
+            ". Перепиши эти посты полностью на русском: имена, клубы и аббревиатуры — кириллицей."
+        try:
+            retry = llm.generate_json(system, _batch_prompt(again) + note, SUMMARY_BATCH_SCHEMA, max_tokens=8192)
+        except Exception as e:
+            log.info("пересказ: повторная попытка не удалась (%s), оставляю первый вариант", e)
+        else:
+            for p in retry.get("posts", []):
+                pid = p.get("id")
+                if pid in dirty and p.get("title_ru") and len(latin_words(p)) < len(dirty[pid]):
+                    posts[pid] = p
+
+    return {pid: _normalize(p) for pid, p in posts.items()}

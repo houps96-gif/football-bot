@@ -51,6 +51,24 @@ SUMMARY_SCHEMA = {
 }
 
 
+SUMMARY_BATCH_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "posts": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {"id": {"type": "string"}, **SUMMARY_SCHEMA["properties"]},
+                "required": ["id", *SUMMARY_SCHEMA["required"]],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "required": ["posts"],
+    "additionalProperties": False,
+}
+
+
 def get_llm() -> LLM:
     if config.LLM_PROVIDER == "gemini":
         from bot.llm.gemini import GeminiLLM

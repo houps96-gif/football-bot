@@ -10,7 +10,7 @@ from bot.matchday import Matchday
 from bot.models import NewsItem
 from bot.sources import matches, registry
 from bot.store import Store, age_hours, now, published_last_hour, ts
-from bot.summarize import summarize
+from bot.summarize import summarize_batch
 from bot.telegram import Telegram, TelegramError
 from bot.triage import triage
 
@@ -348,9 +348,8 @@ class Run:
             budget = min(budget, 5)
         ids = sorted(pending, key=lambda i: -pending[i]["item"]["importance"])[: max(budget, 0)]
 
+        ready: list[tuple[NewsItem, str | None]] = []
         for item_id in ids:
-            if not self.llm_allowed():
-                break
             item = NewsItem.from_dict(pending[item_id]["item"])
             article = extract.fetch_article(item.url)
             text = article.text
@@ -364,42 +363,57 @@ class Run:
             if not item.image_url:
                 item.image_url = images.wiki_photo(item.event)
                 item.image_credit = images.CREDIT if item.image_url else ""
+            ready.append((item, text))
+
+        for start in range(0, len(ready), config.SUMMARY_BATCH_SIZE):
+            if not self.llm_allowed():
+                break
+            chunk = ready[start:start + config.SUMMARY_BATCH_SIZE]
             try:
-                result = summarize(llm, item, text)
+                posts = summarize_batch(llm, chunk)
                 self.st.bump("llm_calls")
                 self.llm_ok = True
             except LLMError as e:
                 self.st.bump("llm_errors")
                 self.llm_error = str(e)
-                pending[item_id]["tries"] += 1
+                for item, _ in chunk:
+                    pending[item.id]["tries"] += 1
                 log.error("пересказ не удался, продолжу в следующий запуск: %s", e)
                 break
+            for item, text in chunk:
+                result = posts.get(item.id)
+                if result is None:
+                    pending[item.id]["tries"] += 1
+                    continue
+                self._publish_summary(item, text, result)
 
-            item.title_ru, item.summary_ru, item.category = result["title_ru"], result["summary_ru"], result["category"]
-            del pending[item_id]
-            self.st.bump("summarized")
-            if not result["newsworthy"]:
-                self.st.daily["not_news"] = self.st.daily.get("not_news", 0) + 1
-                log.info("не новость по тексту статьи — не публикую: %s | %s", item.source, item.title[:100])
-                continue
+    def _publish_summary(self, item: NewsItem, text: str | None, result: dict) -> None:
+        d = self.st.data
+        item.title_ru, item.summary_ru, item.category = result["title_ru"], result["summary_ru"], result["category"]
+        del d["pending"][item.id]
+        self.st.bump("summarized")
+        if not result["newsworthy"]:
+            self.st.daily["not_news"] = self.st.daily.get("not_news", 0) + 1
+            log.info("не новость по тексту статьи — не публикую: %s | %s", item.source, item.title[:100])
+            return
 
-            if self.dry_run:
-                print("\n" + "─" * 70)
-                print(f"[{item.importance}/10 · {item.league} · {item.source}] {'текст статьи' if text else 'только анонс'}"
-                      f" · картинка: {item.image_url or 'нет'}")
-                print(publish.post_text(item))
-                continue
+        if self.dry_run:
+            print("\n" + "─" * 70)
+            print(f"[{item.importance}/10 · {item.league} · {item.source}] {'текст статьи' if text else 'только анонс'}"
+                  f" · картинка: {item.image_url or 'нет'}")
+            print(publish.post_text(item))
+            return
 
-            auto = config.auto_publish_now() or (
-                config.AUTO_PUBLISH_THRESHOLD and item.importance >= config.AUTO_PUBLISH_THRESHOLD)
-            if auto:
-                d["cards"][item_id] = moderation.new_card(item, None, "approved")
-                d["approved"].append(item_id)
-            else:
-                message_id, is_photo = moderation.send_card(self.tg, item)
-                d["cards"][item_id] = moderation.new_card(item, message_id, "sent", photo=is_photo)
-                self.st.bump("cards")
-            self.st.save()
+        auto = config.auto_publish_now() or (
+            config.AUTO_PUBLISH_THRESHOLD and item.importance >= config.AUTO_PUBLISH_THRESHOLD)
+        if auto:
+            d["cards"][item.id] = moderation.new_card(item, None, "approved")
+            d["approved"].append(item.id)
+        else:
+            message_id, is_photo = moderation.send_card(self.tg, item)
+            d["cards"][item.id] = moderation.new_card(item, message_id, "sent", photo=is_photo)
+            self.st.bump("cards")
+        self.st.save()
 
 
     def print_triage(self) -> None:
