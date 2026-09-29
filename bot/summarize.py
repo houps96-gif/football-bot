@@ -8,7 +8,16 @@ from bot.models import NewsItem
 
 log = logging.getLogger(__name__)
 
-SYSTEM = config.SUMMARY_SYSTEM
+COMMON_RULES = """
+
+Конкретика. В посте должны быть факты из статьи, по которым понятно, что произошло: кто, что сделал, где и когда, с кем или против кого, и цифры, если они есть (счёт, сумма, срок, дата). Не пиши пустых оборотов вроде «оставил приятное впечатление», «смог прибавить», «в недавней встрече» — называй матч, соперника, турнир и счёт, если они есть в статье.
+
+Не приписывай людям команду, клуб, должность или организацию, если в статье это не сказано прямо про это событие. Прозвище или принадлежность («мадридиста», «игрок „Реала“», «экс-министр») — не то же самое, что за кого он действовал в этот раз. Подсказка — адрес статьи: разделы вроде /internacional/, /seleccion/, /national-team/ — это сборные.
+
+newsworthy — true, если в статье есть конкретный новый факт (что-то произошло, решено, объявлено, стало известно). false — если главное в статье — впечатления, оценки игры или работы, мнение без новости, разбор без нового факта, обзор или подборка, даже если попутно упомянут счёт или итог: такой пост не будет опубликован. Не превращай такую статью в отчёт о событии.
+
+Не перечисляй участников и авторов голов, если из статьи не ясно, кто за какую сторону выступал."""
+SYSTEM = config.SUMMARY_SYSTEM + COMMON_RULES
 
 
 def build_prompt(item: NewsItem, text: str | None) -> str:
@@ -16,7 +25,7 @@ def build_prompt(item: NewsItem, text: str | None) -> str:
     hits = glossary.hits(" ".join([item.title, item.summary, text or ""]))
     if hits:
         parts.append("Глоссарий (обязательные написания):\n" + "\n".join(hits))
-    parts.append(f"Источник: {item.source}\nЗаголовок: {item.title}")
+    parts.append(f"Источник: {item.source}\nАдрес: {item.url}\nЗаголовок: {item.title}")
     if text:
         parts.append("Текст статьи:\n" + text)
     else:
@@ -68,4 +77,5 @@ def summarize(llm: LLM, item: NewsItem, text: str | None) -> dict:
         "title_ru": clean_ru(result.get("title_ru")),
         "summary_ru": clean_ru(result.get("summary_ru")),
         "category": category if category in config.CATEGORIES else config.CATEGORIES[-1],
+        "newsworthy": result.get("newsworthy", True) is not False,
     }

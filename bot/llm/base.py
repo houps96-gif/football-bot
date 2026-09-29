@@ -44,8 +44,9 @@ SUMMARY_SCHEMA = {
         "title_ru": {"type": "string"},
         "summary_ru": {"type": "string"},
         "category": {"type": "string", "enum": config.CATEGORIES},
+        "newsworthy": {"type": "boolean"},
     },
-    "required": ["title_ru", "summary_ru", "category"],
+    "required": ["title_ru", "summary_ru", "category", "newsworthy"],
     "additionalProperties": False,
 }
 

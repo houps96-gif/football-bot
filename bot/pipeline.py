@@ -378,6 +378,10 @@ class Run:
             item.title_ru, item.summary_ru, item.category = result["title_ru"], result["summary_ru"], result["category"]
             del pending[item_id]
             self.st.bump("summarized")
+            if not result["newsworthy"]:
+                self.st.daily["not_news"] = self.st.daily.get("not_news", 0) + 1
+                log.info("не новость по тексту статьи — не публикую: %s | %s", item.source, item.title[:100])
+                continue
 
             if self.dry_run:
                 print("\n" + "─" * 70)
