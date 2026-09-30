@@ -16,14 +16,14 @@ NOT_NAMES = {
     "Premier", "League", "Champions", "Europa", "Conference", "Nations", "Cup", "World", "Euro", "FA",
     "UEFA", "FIFA", "La", "Liga", "Serie", "Bundesliga", "Ligue", "The", "A", "B", "C", "After", "Before",
 }
-CAPS_RUN = re.compile(r"(?:\b[A-Z][a-z'’-]{1,}\b\s?)+")
+CAPS_RUN = re.compile(r"(?:\b[A-Z][a-z'’-]{1,}\b(?:\s+(?:van|von|de|der|den|da|di|do|dos|du|ter|la|le)\b)*\s?)+")
 
 
 def candidates(event: str) -> list[str]:
     seen: list[str] = []
     for run in CAPS_RUN.findall(event or ""):
         words = [w for w in run.split() if w not in NOT_NAMES]
-        options = ([" ".join(words)] if len(words) == 2 else []) + words[::-1]
+        options = ([" ".join(words)] if len(words) >= 2 else []) + words[-1:]
         for option in options:
             if len(option) > 2 and option not in seen:
                 seen.append(option)
@@ -44,8 +44,10 @@ def wiki_photo(event: str) -> str:
                 continue
             for page in (data.get("query") or {}).get("pages", {}).values():
                 url = (page.get("thumbnail") or {}).get("source", "")
+                surname = fold(name.split()[-1]).lower()
                 filename = fold(unquote(url.rsplit("/", 1)[-1])).lower()
-                if "/wikipedia/commons/" in url and fold(name.split()[-1]).lower() in filename:
+                title = fold(page.get("title", "")).lower()
+                if "/wikipedia/commons/" in url and surname in filename and surname in title:
                     log.info("фото из википедии: %s → %s", name, page.get("title"))
                     return url
     return ""
